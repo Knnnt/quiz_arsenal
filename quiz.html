@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arsenal Quiz Arcade</title>
+  <style>
+    :root {
+      --bg: #fff7ef;
+      --panel: rgba(255, 255, 255, 0.9);
+      --panel-2: rgba(255, 255, 255, 0.8);
+      --accent: #ff9e6d;
+      --accent-2: #ffbf69;
+      --ink: #2f231a;
+      --muted: #8a6f5c;
+      --radius: 18px;
+      --shadow: 0 16px 36px rgba(255, 158, 109, 0.25);
+      --font: "Space Grotesk", "Noto Sans JP", "Inter", system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: radial-gradient(circle at 14% 18%, rgba(255, 179, 116, 0.35), transparent 35%),
+        radial-gradient(circle at 78% 22%, rgba(255, 218, 170, 0.4), transparent 42%),
+        linear-gradient(140deg, #fff7ef 0%, #ffe6d2 55%, #ffd7c0 100%);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+      letter-spacing: 0.01em;
+    }
+
+    .background {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .orb {
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      filter: blur(40px);
+      opacity: 0.55;
+      mix-blend-mode: multiply;
+    }
+
+    .orb-1 {
+      top: -60px;
+      left: -20px;
+      background: radial-gradient(circle, rgba(255, 178, 124, 0.9), rgba(255, 178, 124, 0));
+      animation: float 18s ease-in-out infinite;
+    }
+
+    .orb-2 {
+      bottom: -120px;
+      right: -40px;
+      background: radial-gradient(circle, rgba(255, 218, 170, 0.9), rgba(255, 218, 170, 0));
+      animation: float 16s ease-in-out infinite reverse;
+    }
+
+    @keyframes float {
+      0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+      50% { transform: translate3d(30px, 40px, 0) rotate(6deg); }
+      100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+    }
+
+    .grid {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(255, 158, 109, 0.08) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255, 158, 109, 0.08) 1px, transparent 1px);
+      background-size: 90px 90px;
+      mask-image: radial-gradient(circle at 50% 40%, rgba(255, 198, 158, 0.8), transparent 70%);
+    }
+
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.68));
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 158, 109, 0.15);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: 15px;
+    }
+
+    .crest {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0)),
+        linear-gradient(135deg, rgba(255, 198, 158, 0.95), rgba(255, 158, 109, 0.9));
+      box-shadow: 0 12px 24px rgba(255, 158, 109, 0.35);
+      position: relative;
+    }
+
+    .crest::after {
+      content: '';
+      position: absolute;
+      inset: 8px;
+      border-radius: 10px;
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      box-shadow: inset 0 0 0 2px rgba(4, 6, 14, 0.4);
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    button {
+      font-family: var(--font);
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+    }
+
+    .pill {
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--ink);
+    }
+
+    .ghost {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 158, 109, 0.2);
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--ink);
+    }
+
+    .ghost:hover { background: rgba(255, 255, 255, 0.95); }
+    .ghost:active { transform: translateY(1px); }
+
+    .layout {
+      position: relative;
+      z-index: 1;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 36px 24px 100px;
+      display: grid;
+      gap: 24px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 228, 207, 0.9));
+      border: 1px solid rgba(255, 158, 109, 0.18);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 240px;
+      height: 240px;
+      top: -80px;
+      right: -60px;
+      background: radial-gradient(circle, rgba(255, 198, 158, 0.5), transparent 60%);
+      filter: blur(12px);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 161, 120, 0.12);
+      border: 1px solid rgba(255, 158, 109, 0.25);
+      color: var(--ink);
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 16px 0 12px;
+      font-size: 34px;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+
+    h1 span { color: var(--accent); }
+
+    .hero p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      max-width: 720px;
+      line-height: 1.6;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .glow-card {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(255, 188, 149, 0.35), rgba(255, 255, 255, 0.92));
+      border: 1px solid rgba(255, 158, 109, 0.3);
+      box-shadow: 0 14px 30px rgba(255, 158, 109, 0.28);
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .ball {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff, #ffe1c8);
+      position: relative;
+      box-shadow: 0 12px 24px rgba(255, 158, 109, 0.28);
+      animation: spin 2.6s ease-in-out infinite;
+    }
+
+    .ball::after {
+      content: '';
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      border: 2px dashed rgba(255, 158, 109, 0.6);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-6px) rotate(18deg); }
+      100% { transform: translateY(0) rotate(0deg); }
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.1); opacity: 0.6; }
+      100% { transform: scale(1); opacity: 0.9; }
+    }
+
+    .quiz-card {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 241, 231, 0.9));
+      border: 1px solid rgba(255, 158, 109, 0.18);
+      border-radius: 24px;
+      padding: 26px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(6px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .quiz-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 20%, rgba(255, 197, 152, 0.18), transparent 45%);
+      pointer-events: none;
+    }
+
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 181, 139, 0.12);
+      border: 1px solid rgba(255, 158, 109, 0.2);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .progress {
+      width: 100%;
+      height: 12px;
+      background: rgba(255, 199, 160, 0.2);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 158, 109, 0.28);
+      margin: 14px 0;
+      position: relative;
+    }
+
+    .progress span {
+      position: absolute;
+      inset: 1px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #ff9e6d, #ff7390);
+      width: 14%;
+      transition: width 0.4s ease;
+      box-shadow: 0 8px 18px rgba(255, 143, 102, 0.35);
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      position: relative;
+      z-index: 1;
+    }
+
+    #questionText {
+      font-size: 26px;
+      margin: 12px 0;
+      letter-spacing: -0.01em;
+    }
+
+    .options {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      margin: 18px 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .option {
+      text-align: left;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 158, 109, 0.22);
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--ink);
+      min-height: 70px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25);
+      transform-origin: center;
+    }
+
+    .option:hover { transform: translateY(-2px) scale(1.01); }
+    .option:active { transform: translateY(1px); }
+
+    .option .marker {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-top: 4px;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      flex-shrink: 0;
+    }
+
+    .option.correct {
+      background: linear-gradient(135deg, rgba(127, 232, 189, 0.24), rgba(255, 255, 255, 0.9));
+      border-color: rgba(127, 232, 189, 0.6);
+    }
+
+    .option.correct .marker { background: #7fe8bd; border-color: #7fe8bd; }
+
+    .option.wrong {
+      background: linear-gradient(135deg, rgba(255, 147, 130, 0.26), rgba(255, 255, 255, 0.92));
+      border-color: rgba(255, 147, 130, 0.55);
+      animation: shake 0.4s ease;
+    }
+
+    .option.wrong .marker { background: #ff7a70; border-color: #ff7a70; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-4px); }
+      40% { transform: translateX(4px); }
+      60% { transform: translateX(-2px); }
+      80% { transform: translateX(2px); }
+    }
+
+    .fact {
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255, 226, 206, 0.7);
+      border: 1px solid rgba(255, 158, 109, 0.22);
+      color: var(--ink);
+      min-height: 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .primary {
+      padding: 12px 18px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #ff9e6d, #ff7390);
+      color: #2f231a;
+      font-weight: 700;
+      box-shadow: 0 12px 24px rgba(255, 158, 109, 0.36);
+    }
+
+    .primary:hover { transform: translateY(-2px) scale(1.01); }
+    .primary:active { transform: translateY(1px); }
+
+    .secondary {
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--ink);
+      border: 1px solid rgba(255, 158, 109, 0.22);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(255, 158, 109, 0.32);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 20;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .result {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 244, 234, 0.92), rgba(255, 228, 207, 0.9));
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+      backdrop-filter: blur(6px);
+      z-index: 5;
+    }
+
+    .result.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .result-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 18px;
+      padding: 24px;
+      border: 1px solid rgba(255, 158, 109, 0.26);
+      box-shadow: var(--shadow);
+      max-width: 460px;
+      width: 100%;
+    }
+
+    .result-card h3 { margin-top: 0; }
+    .result-card p { color: var(--muted); }
+
+    .confetti {
+      position: fixed;
+      width: 10px;
+      height: 16px;
+      pointer-events: none;
+      z-index: 30;
+      top: 0;
+      left: 0;
+      opacity: 0.96;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .tilt-target { transition: transform 0.35s ease, box-shadow 0.35s ease; }
+    .tilt-target:hover { box-shadow: 0 16px 34px rgba(255, 158, 109, 0.28); }
+
+    @media (max-width: 720px) {
+      h1 { font-size: 28px; }
+      .quiz-card, .hero { padding: 22px; }
+      .top-bar { padding: 14px 18px; }
+      .option { min-height: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="background">
+    <div class="grid"></div>
+    <div class="orb orb-1 anim"></div>
+    <div class="orb orb-2 anim"></div>
+  </div>
+
+  <header class="top-bar">
+    <div class="brand">
+      <div class="crest anim"></div>
+      <span data-l10n="brand">Arsenal quiz arcade</span>
+    </div>
+    <div class="actions">
+      <button class="ghost" id="langToggle" aria-label="toggle language" data-l10n="lang_toggle"></button>
+      <button class="ghost" id="motionToggle" aria-label="toggle motion" data-l10n="motion_on"></button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="hero reveal tilt-target">
+      <div class="eyebrow" data-l10n="eyebrow">North London energy</div>
+      <h1 data-l10n-html="hero_title">アーセナルへの愛を、クイズで爆発させよう。</h1>
+      <p data-l10n="hero_body">試合の記憶、レジェンドたちの名前、スタジアムの空気感まで。アーセナルの物語を、動きのあるミニゲーム感覚で復習できます。</p>
+      <div class="hero-meta">
+        <div class="glow-card">
+          <div class="ball anim" aria-hidden="true"></div>
+          <div>
+            <div data-l10n="hero_chip_label">難易度: サクッと！</div>
+            <strong id="liveScore" aria-live="polite">0/6</strong>
+          </div>
+        </div>
+        <div class="glow-card">
+          <div class="ball anim" aria-hidden="true" style="animation-duration:3.3s;"></div>
+          <div>
+            <div data-l10n="hero_chip_streak">正解でコンフェッティが舞うよ</div>
+            <strong id="streakLabel">x0</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="quiz-card reveal tilt-target">
+      <div class="quiz-header">
+        <div class="badge" data-l10n="badge_live">ライブトリビア</div>
+        <div class="badge" id="statusText" data-l10n="status_label">Q1 / 6</div>
+      </div>
+
+      <div class="progress" aria-hidden="true">
+        <span id="progressBar"></span>
+      </div>
+
+      <div class="status">
+        <div data-l10n="score_label">スコア</div>
+        <div id="scoreLabel" aria-live="polite">0 / 6</div>
+      </div>
+
+      <h2 id="questionText">-</h2>
+
+      <div class="options" id="options"></div>
+
+      <div class="fact" id="fact" data-l10n="fact_placeholder">ヒントや豆知識がここに出るよ。</div>
+
+      <div class="cta-row">
+        <button class="secondary" id="restart" data-l10n="restart_btn">最初から</button>
+        <div style="display:flex; gap:10px;">
+          <button class="secondary" id="skip" data-l10n="skip_btn">スキップ</button>
+          <button class="primary" id="next" data-l10n="next_btn">次へ</button>
+        </div>
+      </div>
+
+      <div class="result" id="result">
+        <div class="result-card">
+          <h3 data-l10n="complete_title">コンプリート！</h3>
+          <p id="resultBody" data-l10n="complete_body">エミレーツの電光掲示板もあなたを称賛中。</p>
+          <button class="primary" id="playAgain" data-l10n="restart_btn">最初から</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const translations = {
+      en: {
+        title: 'Arsenal Quiz Arcade',
+        brand: 'Arsenal quiz arcade',
+        lang_toggle: '日本語',
+        motion_on: 'Pause motion',
+        motion_off: 'Resume motion',
+        eyebrow: 'North London energy',
+        hero_title: 'Let your <span>Arsenal</span> pride fly with quick-fire trivia.',
+        hero_body: 'Relive iconic Emirates nights, Invincible legends, and modern heroes through a playful quiz with lively motion and bite-sized facts.',
+        hero_chip_label: 'Difficulty: breezy',
+        hero_chip_streak: 'Every correct answer drops confetti',
+        badge_live: 'Live trivia',
+        status_label: 'Q1 / 6',
+        score_label: 'Score',
+        fact_placeholder: 'Hints and fun facts appear here.',
+        restart_btn: 'Restart',
+        skip_btn: 'Skip',
+        next_btn: 'Next',
+        complete_title: 'You aced it!',
+        complete_body: 'The Emirates scoreboard is glowing with your answers.',
+        toast_correct: 'Right on! North London pride.',
+        toast_wrong: 'Close! Arsenal history runs deep.',
+        toast_skip: 'Jumped ahead — the next question awaits.',
+        streak_label: 'Streak',
+        questions: [
+          {
+            prompt: 'What is the name of Arsenal’s home ground?',
+            options: ['Emirates Stadium', 'Highbury Park', 'White Hart Lane', 'Anfield'],
+            answer: 0,
+            fact: 'Arsenal moved to Emirates Stadium in 2006, keeping Highbury’s heritage alive in its stands.'
+          },
+          {
+            prompt: 'Who managed the Invincibles in the 2003-04 season?',
+            options: ['Arsène Wenger', 'Mikel Arteta', 'George Graham', 'Unai Emery'],
+            answer: 0,
+            fact: 'Arsène Wenger’s Invincibles went 49 league games unbeaten — a Premier League record.'
+          },
+          {
+            prompt: 'Which player is nicknamed “Captain Fantastic” for Arsenal?',
+            options: ['Patrick Vieira', 'Tony Adams', 'Cesc Fàbregas', 'Bukayo Saka'],
+            answer: 1,
+            fact: 'Tony Adams captained Arsenal to titles across three decades: 1980s, 1990s, and 2000s.'
+          },
+          {
+            prompt: 'What are Arsenal’s traditional kit colors?',
+            options: ['Red shirts with white sleeves', 'Blue and white hoops', 'Black and gold', 'Green and yellow halves'],
+            answer: 0,
+            fact: 'White sleeves were introduced by manager Herbert Chapman in the 1930s for sharper visibility.'
+          },
+          {
+            prompt: 'Which Hale End graduate wears number 7 under Mikel Arteta?',
+            options: ['Gabriel Martinelli', 'Bukayo Saka', 'Emile Smith Rowe', 'Eddie Nketiah'],
+            answer: 1,
+            fact: 'Bukayo Saka took the iconic number 7 shirt in 2022, following legends like Liam Brady and Pires.'
+          },
+          {
+            prompt: 'How many league defeats did the Invincibles have in 2003-04?',
+            options: ['Zero', 'One', 'Two', 'Three'],
+            answer: 0,
+            fact: 'Zero defeats: 26 wins and 12 draws made Arsenal’s Invincibles truly untouchable.'
+          }
+        ]
+      },
+      ja: {
+        title: 'Arsenal Quiz Arcade',
+        brand: 'Arsenal quiz arcade',
+        lang_toggle: 'English',
+        motion_on: '動きを一時停止',
+        motion_off: '動きを再開',
+        eyebrow: '北ロンドンの熱狂',
+        hero_title: 'アーセナル愛を<span>クイズ</span>で解放しよう。',
+        hero_body: 'エミレーツの記憶、インビンシブルズの栄光、アルテタ時代の若手たちまで。動きのあるプレイフルなクイズで、ガナーズの物語をさらっと復習できます。',
+        hero_chip_label: '難易度: サクッと！',
+        hero_chip_streak: '正解するたびコンフェッティが舞うよ',
+        badge_live: 'ライブトリビア',
+        status_label: 'Q1 / 6',
+        score_label: 'スコア',
+        fact_placeholder: 'ヒントや豆知識がここに出るよ。',
+        restart_btn: '最初から',
+        skip_btn: 'スキップ',
+        next_btn: '次へ',
+        complete_title: 'コンプリート！',
+        complete_body: 'エミレーツの電光掲示板もあなたを称賛中。',
+        toast_correct: 'ナイス！北ロンドンが沸いてる。',
+        toast_wrong: '惜しい！アーセナル史はまだまだ深いよ。',
+        toast_skip: 'ジャンプ！次の設問へ。',
+        streak_label: '連続正解',
+        questions: [
+          {
+            prompt: 'アーセナルの本拠地スタジアムは？',
+            options: ['エミレーツ・スタジアム', 'ハイバリー・パーク', 'ホワイトハート・レーン', 'アンフィールド'],
+            answer: 0,
+            fact: 'エミレーツ・スタジアムへは2006年に移転。ハイバリーの面影はスタンドの名に刻まれています。'
+          },
+          {
+            prompt: '2003-04の「インビンシブルズ」を率いた監督は？',
+            options: ['アーセン・ベンゲル', 'ミケル・アルテタ', 'ジョージ・グラハム', 'ウナイ・エメリ'],
+            answer: 0,
+            fact: 'ベンゲルのチームはリーグ戦49試合無敗。プレミア史に刻まれる大記録です。'
+          },
+          {
+            prompt: 'キャプテン・ファンタスティックの愛称で知られる選手は？',
+            options: ['パトリック・ヴィエラ', 'トニー・アダムス', 'セスク・ファブレガス', 'ブカヨ・サカ'],
+            answer: 1,
+            fact: 'トニー・アダムスは80s, 90s, 00sと3つの年代でタイトルを掲げた伝説の主将。'
+          },
+          {
+            prompt: 'アーセナルの伝統的なキットカラーは？',
+            options: ['赤に白いスリーブ', '青と白のボーダー', 'ブラック×ゴールド', '緑と黄のハーフ'],
+            answer: 0,
+            fact: '白い袖は1930年代にハーバート・チャップマンが導入。視認性を高める意図でした。'
+          },
+          {
+            prompt: 'アルテタ体制で背番号7を背負うハレンドの卒業生は？',
+            options: ['ガブリエウ・マルティネッリ', 'ブカヨ・サカ', 'エミール・スミス・ロウ', 'エディ・エンケティア'],
+            answer: 1,
+            fact: 'ブカヨ・サカは2022年に7番を継承。リアム・ブレイディやピレスの系譜を背負います。'
+          },
+          {
+            prompt: 'インビンシブルズが03-04に喫したリーグ敗戦数は？',
+            options: ['0敗', '1敗', '2敗', '3敗'],
+            answer: 0,
+            fact: '0敗。26勝12分の完全無敗で、まさに触れられない存在でした。'
+          }
+        ]
+      }
+    };
+
+    const langToggle = document.getElementById('langToggle');
+    const motionToggle = document.getElementById('motionToggle');
+    const progressBar = document.getElementById('progressBar');
+    const statusText = document.getElementById('statusText');
+    const scoreLabel = document.getElementById('scoreLabel');
+    const liveScore = document.getElementById('liveScore');
+    const streakLabel = document.getElementById('streakLabel');
+    const questionText = document.getElementById('questionText');
+    const options = document.getElementById('options');
+    const fact = document.getElementById('fact');
+    const toast = document.getElementById('toast');
+    const nextBtn = document.getElementById('next');
+    const skipBtn = document.getElementById('skip');
+    const restartBtn = document.getElementById('restart');
+    const playAgainBtn = document.getElementById('playAgain');
+    const result = document.getElementById('result');
+    const resultBody = document.getElementById('resultBody');
+    const moving = document.querySelectorAll('.anim');
+    const tiltTargets = document.querySelectorAll('.tilt-target');
+
+    let currentLang = 'ja';
+    let motionOn = true;
+    let index = 0;
+    let score = 0;
+    let streak = 0;
+    let answered = false;
+
+    const applyTranslations = () => {
+      const t = translations[currentLang];
+      document.documentElement.lang = currentLang;
+      document.title = t.title;
+      document.querySelectorAll('[data-l10n]').forEach((el) => {
+        const key = el.dataset.l10n;
+        if (t[key]) el.textContent = t[key];
+      });
+      document.querySelectorAll('[data-l10n-html]').forEach((el) => {
+        const key = el.dataset.l10nHtml;
+        if (t[key]) el.innerHTML = t[key];
+      });
+      motionToggle.textContent = motionOn ? t.motion_on : t.motion_off;
+      langToggle.textContent = t.lang_toggle;
+      updateStatus();
+      renderQuestion();
+    };
+
+    const renderQuestion = () => {
+      const t = translations[currentLang];
+      const data = t.questions[index];
+      statusText.textContent = `Q${index + 1} / ${t.questions.length}`;
+      questionText.textContent = data.prompt;
+      options.innerHTML = '';
+      answered = false;
+      data.options.forEach((option, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'option tilt-target';
+        btn.innerHTML = `<span class="marker"></span><div>${option}</div>`;
+        btn.addEventListener('click', () => handleAnswer(i === data.answer, btn, data.fact));
+        options.appendChild(btn);
+      });
+      fact.textContent = t.fact_placeholder;
+      updateProgress();
+    };
+
+    const handleAnswer = (isCorrect, btn, factText) => {
+      if (answered) return;
+      answered = true;
+      const buttons = options.querySelectorAll('.option');
+      buttons.forEach((b) => b.disabled = true);
+      if (isCorrect) {
+        btn.classList.add('correct');
+        score += 1;
+        streak += 1;
+        showToast(translations[currentLang].toast_correct);
+        dropConfetti();
+      } else {
+        btn.classList.add('wrong');
+        streak = 0;
+        showToast(translations[currentLang].toast_wrong);
+        highlightCorrect();
+      }
+      fact.textContent = factText;
+      updateStatus();
+      if (index === translations[currentLang].questions.length - 1) {
+        nextBtn.textContent = translations[currentLang].complete_title;
+      } else {
+        nextBtn.textContent = translations[currentLang].next_btn;
+      }
+      nextBtn.focus();
+    };
+
+    const highlightCorrect = () => {
+      const t = translations[currentLang];
+      const answerIndex = t.questions[index].answer;
+      const buttons = options.querySelectorAll('.option');
+      if (buttons[answerIndex]) buttons[answerIndex].classList.add('correct');
+    };
+
+    const updateProgress = () => {
+      const total = translations[currentLang].questions.length;
+      const percent = Math.max(((index) / total) * 100, 8);
+      progressBar.style.width = `${percent}%`;
+    };
+
+    const updateStatus = () => {
+      const total = translations[currentLang].questions.length;
+      scoreLabel.textContent = `${score} / ${total}`;
+      liveScore.textContent = `${score}/${total}`;
+      streakLabel.textContent = `x${streak}`;
+    };
+
+    const showToast = (message) => {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2100);
+    };
+
+    const goNext = () => {
+      const total = translations[currentLang].questions.length;
+      if (index < total - 1) {
+        index += 1;
+        renderQuestion();
+      } else {
+        showResult();
+      }
+    };
+
+    const skip = () => {
+      showToast(translations[currentLang].toast_skip);
+      streak = 0;
+      goNext();
+    };
+
+    const resetQuiz = () => {
+      index = 0;
+      score = 0;
+      streak = 0;
+      answered = false;
+      result.classList.remove('show');
+      nextBtn.textContent = translations[currentLang].next_btn;
+      renderQuestion();
+      updateStatus();
+    };
+
+    const showResult = () => {
+      const total = translations[currentLang].questions.length;
+      resultBody.textContent = `${score} / ${total} でフィニッシュ！`;
+      result.classList.add('show');
+      dropConfetti(24);
+    };
+
+    const dropConfetti = (count = 12) => {
+      const colors = ['#ff9e6d', '#ffbf69', '#ffd7c0', '#7fe8bd', '#ffffff'];
+      for (let i = 0; i < count; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti';
+        piece.style.left = `${Math.random() * 100}%`;
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.transform = `rotate(${Math.random() * 180}deg)`;
+        const fall = 900 + Math.random() * 700;
+        piece.animate([
+          { transform: `translateY(-20px) rotate(0deg)`, opacity: 1 },
+          { transform: `translateY(${window.innerHeight + 20}px) rotate(${120 + Math.random() * 160}deg)`, opacity: 0.8 }
+        ], { duration: fall, easing: 'ease-out' });
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), fall);
+      }
+    };
+
+    langToggle.addEventListener('click', () => {
+      currentLang = currentLang === 'en' ? 'ja' : 'en';
+      applyTranslations();
+    });
+
+    motionToggle.addEventListener('click', () => {
+      motionOn = !motionOn;
+      moving.forEach((el) => { el.style.animationPlayState = motionOn ? 'running' : 'paused'; });
+      motionToggle.textContent = motionOn ? translations[currentLang].motion_on : translations[currentLang].motion_off;
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (!answered) return;
+      goNext();
+    });
+
+    skipBtn.addEventListener('click', skip);
+    restartBtn.addEventListener('click', resetQuiz);
+    playAgainBtn.addEventListener('click', resetQuiz);
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.2 });
+
+    document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+    const tilt = (el, event) => {
+      const rect = el.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const rotateX = ((y / rect.height) - 0.5) * -5;
+      const rotateY = ((x / rect.width) - 0.5) * 5;
+      el.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-1px)`;
+    };
+
+    document.addEventListener('pointermove', (e) => {
+      const targets = document.querySelectorAll('.tilt-target');
+      targets.forEach((el) => {
+        if (el.matches(':hover')) tilt(el, e);
+      });
+    });
+
+    document.addEventListener('pointerleave', () => {
+      document.querySelectorAll('.tilt-target').forEach((el) => { el.style.transform = ''; });
+    });
+
+    applyTranslations();
+  </script>
+</body>
+</html>
